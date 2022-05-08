@@ -296,6 +296,8 @@ class Program
         FillDictionaries(wordsDict2, freqDict,"dict_freq.txt");
         elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"Filled in {elapsed:f1} ms");
+
+        WriteLine($"Keys in the signature dictionary: {wordsDict2.Keys.Count}");
         
         // testing with data from test_input.txt
         using (StreamReader sr = new StreamReader("test_input.txt"))
