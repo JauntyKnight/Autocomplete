@@ -66,6 +66,7 @@ static class Utils
     }
 }
 
+
 class Signature
 {
     private const int MaxChars = 28;
