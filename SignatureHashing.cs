@@ -110,7 +110,7 @@ static class Utils
 class Signature
 {
     private const int MaxChars = 28;
-    private readonly int[] signat;
+    public readonly int[] signat;
     
 
     public Signature(string s)
@@ -167,6 +167,19 @@ class Signature
             hash = hash * 19 + signat[i];
         return hash;
     }
+
+    private bool EqualsHelper(Signature a)
+    {
+        for (int i = 0; i < MaxChars; ++i)
+            if (signat[i] != a[i])
+                return false;
+        return true;
+    }
+    
+    public override bool Equals(object? obj)
+    {
+        return (obj is Signature a) && EqualsHelper(a);
+    }
 }
 
 class SignatString
@@ -218,13 +231,11 @@ class SignatString
         
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         // Output topOptions
-        WriteLine($"Suggestions for {s}");
         WriteLine($"Matched keys: {mt.Count}");
         WriteLine($"Processed words: {wt.Count}");
         for (int i = 0; i < topOptions && i < mathces.Count; ++i)
             WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
         WriteLine($"Processed suggestions in {elapsed:f1} ms");
-        WriteLine("================");
     }
     
     public static void get_suggestions_fc(
@@ -265,7 +276,6 @@ class SignatString
         for (int i = 0; i < topOptions && i < mathces.Count; ++i)
             WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
         WriteLine($"Processed suggestions in {elapsed:f1} ms");
-        WriteLine("================");
     }
 }
 
@@ -296,7 +306,16 @@ class Program
         FillDictionaries(wordsDict2, freqDict,"dict_freq.txt");
         elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"Filled in {elapsed:f1} ms");
-
+        
+        WriteLine($"Keys in the freq dictionary: {wordsDict.Keys.Count}");
+        // foreach (var key in wordsDict.Keys)
+        // {
+        //     foreach (var i in key.signat)
+        //     {
+        //         Write($"{i} ");
+        //     }
+        //     WriteLine();
+        // }
         WriteLine($"Keys in the signature dictionary: {wordsDict2.Keys.Count}");
         
         // testing with data from test_input.txt
@@ -310,6 +329,7 @@ class Program
                 word.get_suggestions_fc(wordsDict, freqDict, 2, 10);
                 WriteLine("Using signature:");
                 SignatString.get_suggestions_fc(s, wordsDict2, freqDict, 2, 10);
+                WriteLine("================");
             }
     }
 }
