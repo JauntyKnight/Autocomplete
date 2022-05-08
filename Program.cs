@@ -32,10 +32,12 @@ static class Program
             while (sr.ReadLine() is string line)
             {
                 string s = line.Trim();
+                
                 FreqString freqWord = new FreqString(s);
                 WriteLine($"Suggestions for {s}");
                 WriteLine("Using frequency vector:");
                 freqWord.GetSuggestions(freqVecDict, occurencesDict, 2, 10);
+                
                 WriteLine("Using signature:");
                 SignatString signatWord = new SignatString(s);
                 signatWord.GetSuggestions(signatDict, occurencesDict, 2, 10);
