@@ -8,35 +8,86 @@ using System.Collections.Concurrent;
 
 static class Utils
 {
+    public static int ord(char c)
+    {
+        if (c == '\'')
+            return 26;
+        if (c == '-')
+            return 27;
+        return c - 'a';
+    }
+
+    // Damerau-Levenshtein distance
     public static int Distance(string p, string s)
     {
         int n = p.Length + 1, m = s.Length + 1;
         int[,] d = new int[n, m];
-
+        int[] cp = new int[Signature.MaxChars];
+        int x, y, cs;
+    
         for (int i = 1; i < n; ++i)
             d[i, 0] = i;
         for (int i = 1; i < m; ++i)
             d[0, i] = i;
-        
+    
         for (int i = 1; i < n; ++i)
+        {
+            cs = 0;
             for (int j = 1; j < m; ++j)
             {
                 // simple Levenshtein distance
                 int k = Min(d[i - 1, j], d[i, j - 1]) + 1;
                 d[i, j] = Min(k, d[i - 1, j - 1] + (p[i - 1] == s[j - 1] ? 0 : 1));
-                
-                // considering transpositions
-                for (int x = 1; x < i; ++x)
-                    for (int y = 1; y < j; ++y)
-                        if (p[i - 1] == s[y - 1] && p[x - 1] == s[j - 1])
-                            d[i, j] = Min(
-                                d[i, j],
-                                d[x - 1, y - 1] + (i - x) + (j - y) - 1
-                            );
+    
+                // cp[c] stores the largest index x < i such that p[x] = c
+                // cs stores the largest index y < j such that s[y] = p[i]
+    
+                x = cp[ord(s[j - 1])];
+                y = cs;
+                if (x > 0 && y > 0)
+                    d[i - 1, j - 1] = Min(
+                        d[i - 1, j - 1],
+                        d[x - 1, y - 1] + (i - x) + (j - y) - 1
+                    );
+                if (p[i - 1] == s[j - 1])
+                    cs = j;
             }
-
+    
+            cp[ord(p[i - 1])] = i;
+        }
+    
         return d[n - 1, m - 1];
     }
+    // public static int Distance(string p, string s)
+    // {
+    //     int n = p.Length + 1, m = s.Length + 1;
+    //     int[,] d = new int[n, m];
+    //
+    //     for (int i = 1; i < n; ++i)
+    //         d[i, 0] = i;
+    //     for (int i = 1; i < m; ++i)
+    //         d[0, i] = i;
+    //     
+    //     for (int i = 1; i < n; ++i)
+    //     for (int j = 1; j < m; ++j)
+    //     {
+    //         // simple Levenshtein distance
+    //         int k = Min(d[i - 1, j], d[i, j - 1]) + 1;
+    //         d[i, j] = Min(k, d[i - 1, j - 1] + (p[i - 1] == s[j - 1] ? 0 : 1));
+    //             
+    //         // considering transpositions
+    //         for (int x = 1; x < i; ++x)
+    //         for (int y = 1; y < j; ++y)
+    //             if (p[i - 1] == s[y - 1] && p[x - 1] == s[j - 1])
+    //                 d[i, j] = Min(
+    //                     d[i, j],
+    //                     d[x - 1, y - 1] + (i - x) + (j - y) - 1
+    //                 );
+    //     }
+    //
+    //     return d[n - 1, m - 1];
+    // }
+
     
     public static void FillDictionaries(
         Dictionary<Signature, List<string>> wordsDict,
@@ -101,7 +152,7 @@ static class Utils
             else if (c == '-')
                 r |= 134217728;  // 1 << 27
             else
-                r |= (c - 'a');
+                r |= (int) (c - 'a');
         return r;
     }
 }
@@ -109,7 +160,7 @@ static class Utils
 
 class Signature
 {
-    private const int MaxChars = 28;
+    public const int MaxChars = 28;
     public readonly int[] signat;
     
 
@@ -295,6 +346,7 @@ class Program
     static void Main()
     {
         DateTime start = DateTime.Now;
+        WriteLine($"{get_signat("tree")}, {get_signat("tre")}, {get_signat("ham")}");
         SignatDictionary wordsDict = new SignatDictionary();
         Dictionary<string, double> freqDict = new Dictionary<string, double>();
         FillDictionaries(wordsDict, freqDict,"dict_freq.txt");
