@@ -2,6 +2,41 @@
 using System.Collections.Generic;
 using static System.Console;
 using static System.Math;
+using static DamerauLevenshtein;
+
+
+static class DamerauLevenshtein
+{
+    public static int Distance(string p, string s)
+    {
+        int n = p.Length + 1, m = s.Length + 1;
+        int[,] d = new int[n, m];
+
+        for (int i = 1; i < n; ++i)
+            d[i, 0] = i;
+        for (int i = 1; i < m; ++i)
+            d[0, i] = i;
+        
+        for (int i = 1; i < n; ++i)
+            for (int j = 1; j < m; ++j)
+            {
+                // simple Levenshtein distance
+                int k = Min(d[i - 1, j], d[i, j - 1]) + 1;
+                d[i, j] = Min(k, d[i - 1, j - 1] + (p[i - 1] == s[j - 1] ? 0 : 1));
+                
+                // considering transpositions
+                for (int x = 1; x < i; ++x)
+                    for (int y = 1; y < j; ++y)
+                        if (p[i - 1] == s[y - 1] && p[x - 1] == s[j - 1])
+                            d[i, j] = Min(
+                                d[i, j],
+                                d[x - 1, y - 1] + (i - x) + (j - y) - 1
+                            );
+            }
+
+        return d[n - 1, m - 1];
+    }
+}
 
 class Signature
 {
@@ -74,12 +109,14 @@ class SignatString
     
     public void get_suggestions_fc(SignatDictionary dict, int k)
     {
+        // List<string>
         Parallel.ForEach(dict.Keys, key =>
         {
             if (Signature.FC(key, signat) <= k)
-                foreach (var c in dict[key])
+                foreach (var s in dict[key])
                 {
-                    WriteLine(c);
+                    if (Distance(text, s) <= k)
+                            WriteLine(s);
                 }
         });
     }
@@ -123,8 +160,8 @@ class Program
         WriteLine(dict.Count);
         WriteLine($"Filled in {elapsed:f1} ms");
         start = DateTime.Now;
-        SignatString s = new SignatString("typewrit");
-        s.get_suggestions_fc(dict, 2);
+        SignatString s = new SignatString("hel");
+        s.get_suggestions_fc(dict, 1);
         elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"Processed in {elapsed:f1} ms");
     }
