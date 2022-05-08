@@ -34,7 +34,6 @@ public static class SignatureHashing
             
             DateTime start = DateTime.Now;
             ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
-            int signat = get_signat(Text);
             
             Parallel.ForEach(signatDict.Keys, key =>
             {

@@ -77,14 +77,20 @@ public static class Utils
 
     public static int FC(FrequencyVector x, FrequencyVector y)
         => Max(FCHelper(x, y, true), FCHelper(x, y, false));
-    
-    private static int FCHelper(int x, int y, bool plus)
-        => plus
-            ? x & ~y
-            : ~x & y;
+
+    private static int FCHelper(int x, int y)
+    {
+        // counting the number of bits = 1 in x & ~y
+        int r = 0;
+        int a = x & ~y;
+        for (; a > 0; a >>= 1)
+            if ((a & 1) == 1)
+                r++;
+        return r;
+    }
     
     public static int FC(int x, int y)
-        => Max(FCHelper(x, y, true), FCHelper(x, y, false));
+        => Max(FCHelper(x, y), FCHelper(y, x));
 
     
     // public static int Distance(string p, string s)
@@ -178,12 +184,7 @@ public static class Utils
     {
         int r = 0;
         foreach (char c in s)
-            if (c == '\'')
-                r |= 67108864;   // 1 << 26
-            else if (c == '-')
-                r |= 134217728;  // 1 << 27
-            else
-                r |= c - 'a';
+            r |= 1 << ord(c);
         return r;
     }
 }

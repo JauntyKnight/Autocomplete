@@ -6,7 +6,7 @@ using static Utils;
 
 static class Program
 {
-      static void Main()
+    static void Main()
     {
         // filling the FreqVector Dictionary
         DateTime start = DateTime.Now;
@@ -15,7 +15,7 @@ static class Program
         FillDictionaries(freqVecDict, occurencesDict,"dict_freq.txt");
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"FreqVector dictionary filled in {elapsed:f1} ms");
-        
+
         // filling the Signature Dictionary
         start = DateTime.Now;
         SignatDictionary signatDict = new SignatDictionary();
