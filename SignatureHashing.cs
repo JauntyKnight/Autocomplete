@@ -193,6 +193,7 @@ class SignatString
         )
     {
         ConcurrentBag<int> mt = new ConcurrentBag<int>();
+        ConcurrentBag<int> wt = new ConcurrentBag<int>();
         // k = max admissible edit distance
         DateTime start = DateTime.Now;
         ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
@@ -203,6 +204,7 @@ class SignatString
                 mt.Add(1);
                 foreach (var s in wordsDict[key])
                 {
+                    wt.Add(1);
                     int dist = Distance(text, s);
                     // some absolutely random constants yet
                     if (dist <= k)
@@ -218,6 +220,7 @@ class SignatString
         // Output topOptions
         WriteLine($"Suggestions for {s}");
         WriteLine($"Matched keys: {mt.Count}");
+        WriteLine($"Processed words: {wt.Count}");
         for (int i = 0; i < topOptions && i < mathces.Count; ++i)
             WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
         WriteLine($"Processed suggestions in {elapsed:f1} ms");
@@ -231,6 +234,7 @@ class SignatString
     )
     {
         ConcurrentBag<int> mt = new ConcurrentBag<int>();
+        ConcurrentBag<int> wt = new ConcurrentBag<int>();
         // k = max admissible edit distance
         DateTime start = DateTime.Now;
         ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
@@ -242,6 +246,7 @@ class SignatString
                 mt.Add(1);
                 foreach (var s in wordsDict[key])
                 {
+                    wt.Add(1);
                     int dist = Distance(t, s);
                     // some absolutely random constants yet
                     if (dist <= k)
@@ -256,6 +261,7 @@ class SignatString
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         // Output topOptions
         WriteLine($"Matched keys: {mt.Count}");
+        WriteLine($"Processed words: {wt.Count}");
         for (int i = 0; i < topOptions && i < mathces.Count; ++i)
             WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
         WriteLine($"Processed suggestions in {elapsed:f1} ms");
