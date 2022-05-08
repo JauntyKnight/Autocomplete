@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using static System.Console;
 using static System.Math;
-using static DamerauLevenshtein;
+using static Utils;
+using System.Collections.Concurrent;
 
 
-static class DamerauLevenshtein
+static class Utils
 {
     public static int Distance(string p, string s)
     {
@@ -35,6 +36,33 @@ static class DamerauLevenshtein
             }
 
         return d[n - 1, m - 1];
+    }
+    
+    public static void FillDictionaries(
+        Dictionary<Signature, List<string>> wordsDict,
+        Dictionary<string, double> freqDict,
+        string filename
+        )
+    {
+        // precomputed constant to avoid reading the file twice
+        double freqSum = 2293211905f;
+        using (StreamReader sr = new StreamReader(filename))
+            while (sr.ReadLine() is string line)
+            {
+                // filling wordsDict
+                string[] words = line.Trim().Split(null);
+                Signature signat = new Signature(words[0]);
+                if (wordsDict.ContainsKey(signat))
+                    wordsDict[signat].Add(words[0]);
+                else
+                {
+                    wordsDict[signat] = new List<string>();
+                    wordsDict[signat].Add(words[0]);
+                }
+                
+                // filling freqDict
+                freqDict[words[0]] = double.Parse(words[1]) / freqSum;
+            }
     }
 }
 
@@ -73,8 +101,8 @@ class Signature
         else
         {
             for (int i = 0; i < MaxChars; ++i)
-                            if (x[i] < y[i])
-                                r += y[i] - x[i];
+                if (x[i] < y[i])
+                    r += y[i] - x[i];
         }
 
         return r;
@@ -106,19 +134,40 @@ class SignatString
     public Signature Signat => signat;
 
     public string text => s;
+
+    private int Comparator((string, double) p, (string, double) q)
+        => q.Item2.CompareTo(p.Item2);
     
-    public void get_suggestions_fc(SignatDictionary dict, int k)
+    public void get_suggestions_fc(
+        SignatDictionary wordsDict, Dictionary<string, double> freqDict,
+        int k, int topOptions
+        )
     {
-        // List<string>
-        Parallel.ForEach(dict.Keys, key =>
+        // k = max admissible edit distance
+        DateTime start = DateTime.Now;
+        ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
+        Parallel.ForEach(wordsDict.Keys, key =>
         {
             if (Signature.FC(key, signat) <= k)
-                foreach (var s in dict[key])
+                foreach (var s in wordsDict[key])
                 {
-                    if (Distance(text, s) <= k)
-                            WriteLine(s);
+                    int dist = Distance(text, s);
+                    // some absolutely random constants yet
+                    if (dist <= k)
+                            mathcesConcurrent.Add((s, Pow(k - dist + 1, 20) * freqDict[s]));
                 }
         });
+
+        List<(string, double)> mathces = mathcesConcurrent.ToList();
+        mathces.Sort(Comparator);
+        
+        double elapsed = (DateTime.Now - start).TotalMilliseconds;
+        // Output topOptions
+        WriteLine($"Suggestions for {s}");
+        for (int i = 0; i < topOptions && i < mathces.Count; ++i)
+            WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
+        WriteLine($"Processed suggestions in {elapsed:f1} ms");
+        WriteLine("================");
     }
 }
 
@@ -131,22 +180,6 @@ class SignatDictionary : Dictionary<Signature, List<string>>
     {
         EnsureCapacity(size);
     }
-
-    public void Fill(string filename)
-    {
-        using (StreamReader sr = new StreamReader(filename))
-            while (sr.ReadLine() is string line)
-            {
-                Signature signat = new Signature(line);
-                if (ContainsKey(signat))
-                    this[signat].Add(line);
-                else
-                {
-                    this[signat] = new List<string>();
-                    this[signat].Add(line);
-                }
-            }
-    }
 }
 
 class Program
@@ -154,15 +187,18 @@ class Program
     static void Main()
     {
         DateTime start = DateTime.Now;
-        SignatDictionary dict = new SignatDictionary();
-        dict.Fill("dict.txt");
+        SignatDictionary wordsDict = new SignatDictionary();
+        Dictionary<string, double> freqDict = new Dictionary<string, double>();
+        FillDictionaries(wordsDict, freqDict,"dict_freq.txt");
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
-        WriteLine(dict.Count);
         WriteLine($"Filled in {elapsed:f1} ms");
-        start = DateTime.Now;
-        SignatString s = new SignatString("hel");
-        s.get_suggestions_fc(dict, 1);
-        elapsed = (DateTime.Now - start).TotalMilliseconds;
-        WriteLine($"Processed in {elapsed:f1} ms");
+        
+        // testing with data from test_input.txt
+        using (StreamReader sr = new StreamReader("test_input.txt"))
+            while (sr.ReadLine() is string line)
+            {
+                SignatString word = new SignatString(line.Trim());
+                word.get_suggestions_fc(wordsDict, freqDict, 2, 10);
+            }
     }
 }
