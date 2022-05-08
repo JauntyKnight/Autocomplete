@@ -64,6 +64,46 @@ static class Utils
                 freqDict[words[0]] = double.Parse(words[1]) / freqSum;
             }
     }
+    
+    public static void FillDictionaries(
+        Dictionary<int, List<string>> wordsDict,
+        Dictionary<string, double> freqDict,
+        string filename
+    )
+    {
+        // precomputed constant to avoid reading the file twice
+        double freqSum = 2293211905f;
+        using (StreamReader sr = new StreamReader(filename))
+            while (sr.ReadLine() is string line)
+            {
+                // filling wordsDict
+                string[] words = line.Trim().Split(null);
+                int signat = get_signat(words[0]);
+                if (wordsDict.ContainsKey(signat))
+                    wordsDict[signat].Add(words[0]);
+                else
+                {
+                    wordsDict[signat] = new List<string>();
+                    wordsDict[signat].Add(words[0]);
+                }
+                
+                // filling freqDict
+                freqDict[words[0]] = double.Parse(words[1]) / freqSum;
+            }
+    }
+
+    public static int get_signat(string s)
+    {
+        int r = 0;
+        foreach (char c in s)
+            if (c == '\'')
+                r |= 67108864;   // 1 << 26
+            else if (c == '-')
+                r |= 134217728;  // 1 << 27
+            else
+                r |= (c - 'a');
+        return r;
+    }
 }
 
 
@@ -108,8 +148,16 @@ class Signature
 
         return r;
     }
+
+    private static int FCHelper(int x, int y, bool plus)
+        => plus
+            ? x & ~y
+            : ~x & y;
     
     public static int FC(Signature x, Signature y)
+        => Max(FCHelper(x, y, true), FCHelper(x, y, false));
+
+    public static int FC(int x, int y)
         => Max(FCHelper(x, y, true), FCHelper(x, y, false));
     
     public override int GetHashCode()
@@ -136,7 +184,7 @@ class SignatString
 
     public string text => s;
 
-    private int Comparator((string, double) p, (string, double) q)
+    private static int Comparator((string, double) p, (string, double) q)
         => q.Item2.CompareTo(p.Item2);
     
     public void get_suggestions_fc(
@@ -144,19 +192,23 @@ class SignatString
         int k, int topOptions
         )
     {
+        ConcurrentBag<int> mt = new ConcurrentBag<int>();
         // k = max admissible edit distance
         DateTime start = DateTime.Now;
         ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
         Parallel.ForEach(wordsDict.Keys, key =>
         {
             if (Signature.FC(key, signat) <= k)
+            {
+                mt.Add(1);
                 foreach (var s in wordsDict[key])
                 {
                     int dist = Distance(text, s);
                     // some absolutely random constants yet
                     if (dist <= k)
-                            mathcesConcurrent.Add((s, Pow(k - dist + 1, 20) * freqDict[s]));
+                        mathcesConcurrent.Add((s, Pow(k - dist + 1, 20) * freqDict[s]));
                 }
+            }
         });
 
         List<(string, double)> mathces = mathcesConcurrent.ToList();
@@ -165,6 +217,45 @@ class SignatString
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         // Output topOptions
         WriteLine($"Suggestions for {s}");
+        WriteLine($"Matched keys: {mt.Count}");
+        for (int i = 0; i < topOptions && i < mathces.Count; ++i)
+            WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
+        WriteLine($"Processed suggestions in {elapsed:f1} ms");
+        WriteLine("================");
+    }
+    
+    public static void get_suggestions_fc(
+        string t,
+        Dictionary<int, List<string>> wordsDict, Dictionary<string, double> freqDict,
+        int k, int topOptions
+    )
+    {
+        ConcurrentBag<int> mt = new ConcurrentBag<int>();
+        // k = max admissible edit distance
+        DateTime start = DateTime.Now;
+        ConcurrentBag<(string, double)> mathcesConcurrent = new ConcurrentBag<(string, double)>();
+        int signat = get_signat(t);
+        Parallel.ForEach(wordsDict.Keys, key =>
+        {
+            if (Signature.FC(key, signat) <= k)
+            {
+                mt.Add(1);
+                foreach (var s in wordsDict[key])
+                {
+                    int dist = Distance(t, s);
+                    // some absolutely random constants yet
+                    if (dist <= k)
+                        mathcesConcurrent.Add((s, Pow(k - dist + 1, 20) * freqDict[s]));
+                }
+            }
+        });
+
+        List<(string, double)> mathces = mathcesConcurrent.ToList();
+        mathces.Sort(Comparator);
+        
+        double elapsed = (DateTime.Now - start).TotalMilliseconds;
+        // Output topOptions
+        WriteLine($"Matched keys: {mt.Count}");
         for (int i = 0; i < topOptions && i < mathces.Count; ++i)
             WriteLine($"{mathces[i].Item1}: {mathces[i].Item2:f3}");
         WriteLine($"Processed suggestions in {elapsed:f1} ms");
@@ -193,13 +284,24 @@ class Program
         FillDictionaries(wordsDict, freqDict,"dict_freq.txt");
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"Filled in {elapsed:f1} ms");
+        start = DateTime.Now;
+        Dictionary<int, List<string>> wordsDict2 = new Dictionary<int, List<string>>();
+        freqDict = new Dictionary<string, double>();
+        FillDictionaries(wordsDict2, freqDict,"dict_freq.txt");
+        elapsed = (DateTime.Now - start).TotalMilliseconds;
+        WriteLine($"Filled in {elapsed:f1} ms");
         
         // testing with data from test_input.txt
         using (StreamReader sr = new StreamReader("test_input.txt"))
             while (sr.ReadLine() is string line)
             {
-                SignatString word = new SignatString(line.Trim());
+                string s = line.Trim();
+                SignatString word = new SignatString(s);
+                WriteLine($"Suggestions for {s}");
+                WriteLine("Using frequency vector:");
                 word.get_suggestions_fc(wordsDict, freqDict, 2, 10);
+                WriteLine("Using signature:");
+                SignatString.get_suggestions_fc(s, wordsDict2, freqDict, 2, 10);
             }
     }
 }
