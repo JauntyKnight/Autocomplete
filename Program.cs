@@ -1,30 +1,19 @@
 using static System.Console;
-using static SignatureHashing;
-using static FrequencyVectorHashing;
-using static Utils;
+using SignatureHashing;
+using static Utils.Utils;
 
 
 static class Program
 {
     static void Main()
     {
-        // filling the FreqVector Dictionary
+        // filling the Dictionaries
         DateTime start = DateTime.Now;
-        FreqVecDictionary freqVecDict = new FreqVecDictionary();
-        Dictionary<string, double> occurencesDict = new Dictionary<string, double>();
-        FillDictionaries(freqVecDict, occurencesDict,"dict_freq.txt");
+        var signatDict = new SignatDictionary();
+        var freqDict = signatDict.Fill("dict_freq.txt");
         double elapsed = (DateTime.Now - start).TotalMilliseconds;
         WriteLine($"FreqVector dictionary filled in {elapsed:f1} ms");
-
-        // filling the Signature Dictionary
-        start = DateTime.Now;
-        SignatDictionary signatDict = new SignatDictionary();
-        occurencesDict = new Dictionary<string, double>();
-        FillDictionaries(signatDict, occurencesDict,"dict_freq.txt");
-        elapsed = (DateTime.Now - start).TotalMilliseconds;
-        WriteLine($"SignatDictionary filled in {elapsed:f1} ms");
         
-        WriteLine($"Keys in the FrequencyVector dictionary: {freqVecDict.Keys.Count}");
         WriteLine($"Keys in the Signature dictionary: {signatDict.Keys.Count}");
         
         // testing with data from test_input.txt
@@ -33,14 +22,10 @@ static class Program
             {
                 string s = line.Trim();
                 
-                FreqString freqWord = new FreqString(s);
-                WriteLine($"Suggestions for {s}");
-                WriteLine("Using frequency vector:");
-                freqWord.GetSuggestions(freqVecDict, occurencesDict, 2, 10);
-                
-                WriteLine("Using signature:");
-                SignatString signatWord = new SignatString(s);
-                signatWord.GetSuggestions(signatDict, occurencesDict, 2, 10);
+                WriteLine($"Recommendations for {s}");
+                SignatString word = new SignatString(s);
+                foreach (var c in signatDict.Lookup(word, 2))
+                    WriteLine(c.Item1);
                 WriteLine("================");
             }
     }
