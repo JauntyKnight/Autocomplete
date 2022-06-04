@@ -9,7 +9,7 @@ public static class Utils
     private const int SlashIndex = 26;
     private const int MinusIndex = 27;
     
-    public static int ord(char c)
+    public static int Ord(char c)
     {
         if (c == '\'')
             return SlashIndex;
@@ -43,7 +43,7 @@ public static class Utils
                 // cp[c] stores the largest index x < i such that p[x] = c
                 // cs stores the largest index y < j such that s[y] = p[i]
     
-                x = cp[ord(s[j - 1])];
+                x = cp[Ord(s[j - 1])];
                 y = cs;
                 if (x > 0 && y > 0)
                     d[i - 1, j - 1] = Min(
@@ -54,7 +54,7 @@ public static class Utils
                     cs = j;
             }
     
-            cp[ord(p[i - 1])] = i;
+            cp[Ord(p[i - 1])] = i;
         }
     
         return d[n - 1, m - 1];

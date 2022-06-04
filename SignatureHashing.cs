@@ -13,18 +13,26 @@ namespace SignatureHashing
         private string text;
         private int signat;
         
-        public static int get_signat(string s)
+        public static int GetSignat(string s)
         {
             int r = 0;
             foreach (char c in s)
-                r |= 1 << ord(c);
+                r |= 1 << Ord(c);
             return r;
+        }
+
+        public static bool IsValidString(string s)
+        {
+            foreach (char c in s)
+                if (Ord(c) >= MaxChars || Ord(c) < 0)
+                    return false;
+            return true;
         }
         
         public SignatString(string t)
         {
             text = t;
-            signat = get_signat(text);
+            signat = GetSignat(text);
         }
 
         public int Signature => signat;
@@ -56,7 +64,7 @@ namespace SignatureHashing
 
         public void Add(string s)
         {
-            int signat = SignatString.get_signat(s);
+            int signat = SignatString.GetSignat(s);
             if (ContainsKey(signat))
                 this[signat].Add(s);
             else
@@ -89,7 +97,7 @@ namespace SignatureHashing
 
         public List<(string, int)> Lookup(SignatString word, int maxDist)
         {
-            ConcurrentBag<(string, int)> mathcesConcurrent = new ConcurrentBag<(string, int)>();
+            var mathcesConcurrent = new ConcurrentBag<(string, int)>();
 
             Parallel.ForEach(Keys, key =>
             {
