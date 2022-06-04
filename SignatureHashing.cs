@@ -95,9 +95,9 @@ namespace SignatureHashing
             return freqDict;
         }
 
-        public List<(string, int)> Lookup(SignatString word, int maxDist)
+        public List<(string, double)> Lookup(SignatString word, int maxDist)
         {
-            var mathcesConcurrent = new ConcurrentBag<(string, int)>();
+            var mathcesConcurrent = new ConcurrentBag<(string, double)>();
 
             Parallel.ForEach(Keys, key =>
             {
