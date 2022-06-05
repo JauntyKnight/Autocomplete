@@ -1,4 +1,4 @@
-using System.Threading.Tasks.Sources;
+using Cairo;
 using static System.Console;
 using SignatureHashing;
 using static System.Math;
@@ -8,6 +8,9 @@ using GLib;
 using Gtk;
 using GtkSource;
 using Application = Gtk.Application;
+using CancelArgs = Gtk.CancelArgs;
+using CancelHandler = Gtk.CancelHandler;
+using Menu = Gtk.Menu;
 
 class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
 {
@@ -91,7 +94,6 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
                 item.Label = item.Text = w.Item1;
                 list.Append(item.Handle);
             }
-
         }
 
         context.AddProposals(new CompletionProviderAdapter(this), list, true);
@@ -101,18 +103,89 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
 
 class MainWindow : Gtk.Window
 {
-    public MainWindow() : base("Autocomplete")
+    private SourceView view;
+    private string filename = "";  // the file where the data is saved
+    
+    private void OnOpenClicked(object? o, EventArgs args)
     {
-        ScrolledWindow scrolledWindow = new ScrolledWindow();
-        scrolledWindow.SetSizeRequest(600, 400);
-        SourceView view = new SourceView();
-        view.SetSizeRequest(600, 400);
-        scrolledWindow.Add(view);
-        Add(scrolledWindow);
-        view.Completion.AddProvider(new CompletionProviderAdapter(new Provider()));
-        view.Completion.ShowHeaders = false;
+        var fcd = new FileChooserDialog("Open File", null, FileChooserAction.Open);
+        fcd.AddButton(Stock.Cancel, ResponseType.Cancel);
+        fcd.AddButton(Stock.Open, ResponseType.Ok);
+        fcd.DefaultResponse = ResponseType.Ok;
+        fcd.SelectMultiple = false;
+        if (fcd.Run() == (int) ResponseType.Ok)
+        {
+            filename = fcd.Filename;
+            view.Buffer.Clear();
+            using (StreamReader sr = new StreamReader(fcd.Filename))
+                while (sr.ReadLine() is string s)
+                    view.Buffer.Text += s + '\n';
+        }
+        fcd.Destroy();
     }
 
+    private void SaveToFile()
+    {
+        using (StreamWriter sw = new StreamWriter(filename))
+            foreach (var s in view.Buffer.Text.Split('\n'))
+                sw.WriteLine(s);
+    }
+
+    private void OnSaveAsClicked(object? o, EventArgs args)
+    {
+        var fcd = new FileChooserDialog("Save File", null, FileChooserAction.Save);
+        fcd.AddButton(Stock.Cancel, ResponseType.Cancel);
+        fcd.AddButton(Stock.SaveAs, ResponseType.Ok);
+        fcd.DefaultResponse = ResponseType.Ok;
+        fcd.SelectMultiple = false;
+        if (fcd.Run() == (int)ResponseType.Ok)
+        {
+            filename = fcd.Filename;
+            SaveToFile();
+        }
+        fcd.Destroy();
+    }
+    
+    private void OnSaveClicked(object? o, EventArgs args)
+    {
+        if (filename != "")
+            SaveToFile();
+        else
+            OnSaveAsClicked(null, EventArgs.Empty);
+    }
+
+    public MainWindow() : base("Autocomplete")
+    {
+        // holds the content of the window
+        VBox vBox = new VBox();
+        // toolbar with save, open and options buttons
+        Toolbar toolbar = new Toolbar();
+        vBox.Add(toolbar);
+
+        var saveBtn = new ToolButton(new Image("img/Save.png"), "Save");
+        saveBtn.Clicked += OnSaveClicked;
+        toolbar.Add(saveBtn);
+        
+        var saveAsBtn = new ToolButton(new Image("img/SaveAs.png"), "Save");
+        saveAsBtn.Clicked += OnSaveAsClicked;
+        toolbar.Add(saveAsBtn);
+        
+        var openBtn = new ToolButton(new Image("img/Open.png"), "Open");
+        openBtn.Clicked += OnOpenClicked;
+        toolbar.Add(openBtn);
+        
+        ScrolledWindow scrolledWindow = new ScrolledWindow();
+        scrolledWindow.SetSizeRequest(600, 400);
+        view = new SourceView();
+        view.SetSizeRequest(600, 400);
+        scrolledWindow.Add(view);
+        vBox.Add(scrolledWindow);
+        Add(vBox);
+        view.Completion.AddProvider(new CompletionProviderAdapter(new Provider()));
+        view.Completion.ShowHeaders = false;
+        ShowAll();
+    }
+    
     protected override bool OnDeleteEvent(Event evnt)
     {
         Application.Quit();
