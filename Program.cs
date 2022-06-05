@@ -49,6 +49,7 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
     {
         for (int i = 0; i < suggestions.Count; ++i)
         {
+            // using some almost random constants to compute the score
             (string s, double distance) = suggestions[i];
             double score = 0;
             if (s != word_to_complete)
@@ -64,6 +65,21 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
         
         suggestions.Sort(SortDecreasing);
     }
+
+    string ApplyMask(string s, string t)
+    {
+        // returns a copy a copy of t, but with uppercase chars at indexes where
+        // s is uppercase
+        string r = "";
+        for (int i = 0; i < Min(s.Length, t.Length); ++i)
+            r += s[i].ToString() == s[i].ToString().ToUpper()
+                ? t[i].ToString().ToUpper()
+                : t[i];
+
+        return s.Length < t.Length
+            ? r + t.Substring(s.Length, t.Length - s.Length)
+            : r;
+    }
     
     public void Populate(CompletionContext context) {
         // Find the text that needs to be autocompleted.
@@ -71,10 +87,11 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
         TextIter start = end;
         start.BackwardVisibleWordStart();
         GLib.List list = new GLib.List(typeof(CompletionItem));
-        string word_to_complete = start.Buffer.GetText(start, end, false).ToLower();
+        string word_to_complete = start.Buffer.GetText(start, end, false);
+        string word_to_complete_lower = word_to_complete.ToLower();
     
         // dont suggest anything if the string contains non-recognizable chars
-        if (!SignatString.IsValidString(word_to_complete))
+        if (!SignatString.IsValidString(word_to_complete_lower))
         {
             context.AddProposals(new CompletionProviderAdapter(this), list, true);
             return;
@@ -83,15 +100,15 @@ class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
         if (word_to_complete.Length >= 1)
         {
             var suggestions =
-                signatDict.Lookup(new SignatString(word_to_complete), MaxDist);
+                signatDict.Lookup(new SignatString(word_to_complete_lower), MaxDist);
 
-            SortSuggestions(word_to_complete, suggestions);
+            SortSuggestions(word_to_complete_lower, suggestions);
             suggestions = suggestions.GetRange(0, Min(MaxSuggestions, suggestions.Count));
 
-            foreach (var w in suggestions)
+            foreach (var word in suggestions)
             {
                 CompletionItem item = new CompletionItem();
-                item.Label = item.Text = w.Item1;
+                item.Label = item.Text = ApplyMask(word_to_complete, word.Item1);
                 list.Append(item.Handle);
             }
         }
@@ -173,11 +190,12 @@ class MainWindow : Gtk.Window
         var openBtn = new ToolButton(new Image("img/Open.png"), "Open");
         openBtn.Clicked += OnOpenClicked;
         toolbar.Add(openBtn);
-        
+
         ScrolledWindow scrolledWindow = new ScrolledWindow();
         scrolledWindow.SetSizeRequest(600, 400);
         view = new SourceView();
         view.SetSizeRequest(600, 400);
+
         scrolledWindow.Add(view);
         vBox.Add(scrolledWindow);
         Add(vBox);
