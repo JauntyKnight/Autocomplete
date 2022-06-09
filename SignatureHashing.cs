@@ -83,7 +83,7 @@ namespace SignatureHashing
                 {
                     string[] words = line.Trim().Split(null);
 
-                    Add(words[0]);
+                    Add(words[0].ToLower());
 
                     // filling freqDict
                     freqDict[words[0]] = double.Parse(words[1]) / freqSum;
