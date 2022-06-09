@@ -215,9 +215,6 @@ class MainWindow : Gtk.Window
         // toolbar with save, open and options buttons
         Toolbar toolbar = new Toolbar();
         vBox.Add(toolbar);
-        
-        // KeyPressEvent += OnKeyPressEvent;
-        // KeyReleaseEvent += OnKeyReleaseEvent;
 
         var saveBtn = new ToolButton(new Image("img/Save.png"), "Save");
         saveBtn.TooltipText = "Save File";
