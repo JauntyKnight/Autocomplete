@@ -55,13 +55,8 @@ namespace SignatureHashing
 
     public class SignatDictionary : Dictionary<int, List<string>>
     {
-        private int size = 436450;
-
-        public SignatDictionary()
-        {
-            EnsureCapacity(size);
-        }
-
+        private int size;
+        
         public void Add(string s)
         {
             int signat = SignatString.GetSignat(s);
@@ -78,10 +73,12 @@ namespace SignatureHashing
         // to avoid reading the file twice
         public Dictionary<string, double> Fill(string filename)
         {
-            // precomputed constant to avoid reading the file twice
-            double freqSum = 2293211905f;
             var freqDict = new Dictionary<string, double>();
             using (StreamReader sr = new StreamReader(filename))
+            {
+                size = int.Parse(sr.ReadLine()!);
+                double freqSum = double.Parse(sr.ReadLine()!);
+                
                 while (sr.ReadLine() is string line)
                 {
                     string[] words = line.Trim().Split(null);
@@ -91,6 +88,7 @@ namespace SignatureHashing
                     // filling freqDict
                     freqDict[words[0]] = double.Parse(words[1]) / freqSum;
                 }
+            }
 
             return freqDict;
         }

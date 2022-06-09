@@ -1,23 +1,20 @@
-using Cairo;
 using static System.Console;
 using SignatureHashing;
 using static System.Math;
-using static Utils.Utils;
 using Gdk;
 using GLib;
 using Gtk;
 using GtkSource;
 using Application = Gtk.Application;
-using CancelArgs = Gtk.CancelArgs;
-using CancelHandler = Gtk.CancelHandler;
-using Menu = Gtk.Menu;
+using Key = Gdk.Key;
+
 
 class Provider : GLib.Object, GtkSource.ICompletionProviderImplementor
 {
     private SignatDictionary signatDict;
     private Dictionary<string, double> freqDict;
-    private int MaxSuggestions = 5;
-    private int MaxDist = 3;
+    private const int MaxSuggestions = 5;
+    private const int MaxDist = 3;
 
     public Provider()
     {
@@ -122,6 +119,11 @@ class MainWindow : Gtk.Window
 {
     private SourceView view;
     private string filename = "";  // the file where the data is saved
+
+    private void UpdateWindowTitle()
+    {
+        Title = $"Autocomplete: {filename}";
+    }
     
     private void OnOpenClicked(object? o, EventArgs args)
     {
@@ -137,6 +139,7 @@ class MainWindow : Gtk.Window
             using (StreamReader sr = new StreamReader(fcd.Filename))
                 while (sr.ReadLine() is string s)
                     view.Buffer.Text += s + '\n';
+            UpdateWindowTitle();
         }
         fcd.Destroy();
     }
@@ -159,6 +162,7 @@ class MainWindow : Gtk.Window
         {
             filename = fcd.Filename;
             SaveToFile();
+            UpdateWindowTitle();
         }
         fcd.Destroy();
     }
@@ -171,6 +175,39 @@ class MainWindow : Gtk.Window
             OnSaveAsClicked(null, EventArgs.Empty);
     }
 
+    private bool CheckKeyPressMask(KeyPressEventArgs args, ModifierType mask)
+        => (args.Event.State & mask) != 0;
+    
+    private void OnKeyPressEvent(object? o, KeyPressEventArgs args)
+    {
+        // Shortcut handler
+        if (CheckKeyPressMask(args, ModifierType.ControlMask))
+        {
+            if (CheckKeyPressMask(args, ModifierType.ShiftMask) && args.Event.Key == Key.s)
+                OnSaveAsClicked(null, EventArgs.Empty);
+            else if (args.Event.Key == Key.s)
+                OnSaveClicked(null, EventArgs.Empty);
+            else if (args.Event.Key == Key.o)
+                OnOpenClicked(null, EventArgs.Empty);
+        }
+    }
+    
+    private void OnKeyReleaseEvent(object? o, KeyReleaseEventArgs args)
+    {
+        // Shortcut handler
+        WriteLine("release");
+        if (args.Event.State == ModifierType.ControlMask)
+        {
+            WriteLine("fafsad");
+            if (args.Event.Key == Key.Alt_L && args.Event.Key == Key.s)
+                OnSaveAsClicked(null, EventArgs.Empty);
+            else if (args.Event.Key == Key.s)
+                OnSaveClicked(null, EventArgs.Empty);
+            else if (args.Event.Key == Key.o)
+                OnOpenClicked(null, EventArgs.Empty);
+        }
+    }
+
     public MainWindow() : base("Autocomplete")
     {
         // holds the content of the window
@@ -178,23 +215,30 @@ class MainWindow : Gtk.Window
         // toolbar with save, open and options buttons
         Toolbar toolbar = new Toolbar();
         vBox.Add(toolbar);
+        
+        // KeyPressEvent += OnKeyPressEvent;
+        // KeyReleaseEvent += OnKeyReleaseEvent;
 
         var saveBtn = new ToolButton(new Image("img/Save.png"), "Save");
+        saveBtn.TooltipText = "Save File";
         saveBtn.Clicked += OnSaveClicked;
         toolbar.Add(saveBtn);
         
-        var saveAsBtn = new ToolButton(new Image("img/SaveAs.png"), "Save");
+        var saveAsBtn = new ToolButton(new Image("img/SaveAs.png"), "Save as");
+        saveAsBtn.TooltipText = "Save File As";
         saveAsBtn.Clicked += OnSaveAsClicked;
         toolbar.Add(saveAsBtn);
         
         var openBtn = new ToolButton(new Image("img/Open.png"), "Open");
+        openBtn.TooltipText = "Open File";
         openBtn.Clicked += OnOpenClicked;
         toolbar.Add(openBtn);
 
         ScrolledWindow scrolledWindow = new ScrolledWindow();
-        scrolledWindow.SetSizeRequest(600, 400);
+        scrolledWindow.SetSizeRequest(800, 600);
         view = new SourceView();
-        view.SetSizeRequest(600, 400);
+        view.KeyPressEvent += OnKeyPressEvent;
+        view.SetSizeRequest(800, 600);
 
         scrolledWindow.Add(view);
         vBox.Add(scrolledWindow);
