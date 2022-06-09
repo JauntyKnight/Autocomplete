@@ -192,22 +192,6 @@ class MainWindow : Gtk.Window
         }
     }
     
-    private void OnKeyReleaseEvent(object? o, KeyReleaseEventArgs args)
-    {
-        // Shortcut handler
-        WriteLine("release");
-        if (args.Event.State == ModifierType.ControlMask)
-        {
-            WriteLine("fafsad");
-            if (args.Event.Key == Key.Alt_L && args.Event.Key == Key.s)
-                OnSaveAsClicked(null, EventArgs.Empty);
-            else if (args.Event.Key == Key.s)
-                OnSaveClicked(null, EventArgs.Empty);
-            else if (args.Event.Key == Key.o)
-                OnOpenClicked(null, EventArgs.Empty);
-        }
-    }
-
     public MainWindow() : base("Autocomplete")
     {
         // holds the content of the window
